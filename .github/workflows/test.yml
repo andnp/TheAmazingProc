@@ -2,14 +2,15 @@ name: Test
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
+    steps:
     - name: Set up Python 3.9
       uses: actions/setup-python@v1
       with:

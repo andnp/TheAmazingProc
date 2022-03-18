@@ -39,7 +39,7 @@ def run(cmd: str):
 
 # get latest git tag number
 version_str = run('git describe --abbrev=0 --tags')
-git = toVersion(version_str)
+git = toVersion(version_str[1:])
 
 # get latest setup.py version
 with open('setup.py', 'r') as f:
@@ -68,3 +68,17 @@ elif versionGreater(setup, git):
 else:
     # note this condition is pretty weird, the git version _generally_ shouldn't be bigger...
     next_version = git
+
+new_tag = f'v{next_version.major}.{next_version.minor}.{next_version.patch}'
+print(f'Updating to version: {new_tag}')
+
+run('git checkout main')
+commit = run('git rev-parse HEAD')
+needs_tag = run(f'git describe --contains {commit}')
+
+if needs_tag:
+    run('git add setup.py')
+    run(f'git commit -m "updating to version {new_tag}"')
+    run(f'git tag {new_tag}')
+    run('git push')
+    run('git push --tags')

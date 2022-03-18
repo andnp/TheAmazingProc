@@ -1,0 +1,26 @@
+name: Publish
+
+on:
+  workflow_run:
+    workflows: ['Test']
+    branches: [master]
+    types:
+      - completed
+
+jobs:
+  build:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - run: git fetch --prune --unshallow
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.9
+    - name: Publish
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: python ./scripts/tag.py

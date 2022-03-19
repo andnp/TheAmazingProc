@@ -5,10 +5,12 @@ from maze.grid import Coords, neighbors, toCoords
 
 @njit(cache=True)
 def _samplePath(unvisited: SamplableSet, shape: Coords):
+    # grab a random unvisited cell that will start our path
     cell = unvisited.sample()
-
     path = [cell]
 
+    # from that starting cell, randomly traverse neighboring cells
+    # until we collide with any visited cell in the maze
     while unvisited.contains(cell):
         cell = neighbors(cell, shape).sample()
 
@@ -60,15 +62,23 @@ def sample(size: Coords, seed: int):
     # because of the njit compilation
     np.random.seed(seed)
 
+    # NOTE:
+    # the maze will be twice the size of the requested coords
+    # in order to accomodate the walls taking up a state cell
+    # pay special attention to bottom and right walls
     maze = np.ones((
         size[0] * 2 + 1,
         size[1] * 2 + 1,
     ), dtype=np.int_)
 
+    # mark every cell as unvisited within the "inner" grid
+    # then pick a random starting point to seed the monte
+    # carlo path sampling
     unvisited = SamplableSet(range(size[0] * size[1]))
     start = unvisited.sample()
     unvisited.remove(start)
 
+    # while there are still unvisited states, keep sampling paths
     while unvisited.length() > 0:
         path = _samplePath(unvisited, size)
 

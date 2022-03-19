@@ -13,6 +13,7 @@ flake8 = "*"
 commitizen = "*"
 pre-commit = "*"
 pipenv-setup = {extras = ["black"], version = "*"}
+matplotlib = "*"
 
 [requires]
 python_version = "3.9"

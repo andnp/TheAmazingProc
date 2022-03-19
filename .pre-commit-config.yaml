@@ -1,5 +1,6 @@
 repos:
 - hooks:
+  - id: flake8
   - id: commitizen
     stages:
     - commit-msg

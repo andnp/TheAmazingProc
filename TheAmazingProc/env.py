@@ -1,7 +1,7 @@
-from typing import List, Set, Tuple
 import numpy as np
+from typing import List, Tuple
 from numba import njit
-import numba.typed.typedlist as NList
+from utils.SamplableSet import SamplableSet
 
 Coords = Tuple[int, int]
 
@@ -29,11 +29,12 @@ def toCoords(state: int, shape: Coords) -> Coords:
     x = int(state % shape[0])
     return (x, y)
 
-@njit(cache=True)
+# TODO: for some weird reason this cannot be cached
+@njit
 def neighbors(state: int, shape: Coords):
     x, y = toCoords(state, shape)
 
-    return set([
+    return SamplableSet([
         toBoundedState((x + 1, y), shape),
         toBoundedState((x - 1, y), shape),
         toBoundedState((x, y + 1), shape),
@@ -68,16 +69,13 @@ def actions(state: int, nstate: int, shape: Coords):
     return ret
 
 @njit(cache=True)
-def _samplePath(unvisited: List[int], shape: Coords):
-    idx = np.random.randint(0, len(unvisited))
-    cell = unvisited[idx]
+def _samplePath(unvisited: SamplableSet, shape: Coords):
+    cell = unvisited.sample()
 
     path = [cell]
 
-    while cell in unvisited:
-        possible_next = np.array(list(neighbors(cell, shape)))
-        idx = np.random.randint(0, len(possible_next))
-        cell = possible_next[idx]
+    while unvisited.contains(cell):
+        cell = neighbors(cell, shape).sample()
 
         # delete loops, otherwise we cannot guarantee solvability
         if cell in path:
@@ -119,22 +117,15 @@ def _drawLine(maze: np.ndarray, start: Coords, end: Coords):
 def _project(state: int, shape: Coords):
     x, y = toCoords(state, shape)
 
-    return ( 3 * x + 1, 3 * y + 1 )
+    return ( 2 * x + 1, 2 * y + 1 )
 
 @njit(cache=True)
-def _carvePath(maze: np.ndarray, path: List[int]):
-    # the inner shape defines the shape of the path generator
-    # the maze itself will have walls which occupy space
-    inner_shape = (
-        int(maze.shape[0] // 3),
-        int(maze.shape[1] // 3),
-    )
-
+def _carvePath(maze: np.ndarray, path: List[int], size: Coords):
     # walk through the path and mark visited states as non-wall states
-    last = _project(path[0], inner_shape)
+    last = _project(path[0], size)
     for state in path:
         # project the x, y coord onto the full maze
-        start = _project(state, inner_shape)
+        start = _project(state, size)
         maze = _drawLine(maze, start, last)
 
         last = start
@@ -147,35 +138,23 @@ def sample(size: Coords, seed: int):
     # because of the njit compilation
     np.random.seed(seed)
 
-    # the inner shape defines the shape of the path generator
-    # the maze itself will have walls which occupy space
-    # TODO: assumes even divisibility
-    inner_shape = (
-        int(size[0] // 3),
-        int(size[1] // 3),
-    )
+    maze = np.ones((
+        size[0] * 2 + 1,
+        size[1] * 2 + 1,
+    ), dtype=np.int_)
 
-    maze = np.ones(size, dtype=np.int_)
-
-    # TODO: this _really_ should be a set instead of a list
-    # However the default `Set` has O(n) sampling, so we just trade one
-    # O(n) op for another. Can be solved with a smarter set type
-    # for O(1) content checking and O(1) sampling
-    unvisited = list(range(inner_shape[0] * inner_shape[1]))
-
-    start = np.random.randint(0, len(unvisited))
+    unvisited = SamplableSet(range(size[0] * size[1]))
+    start = unvisited.sample()
     unvisited.remove(start)
 
-    while len(unvisited) > 0:
-        print(len(unvisited))
-        path = _samplePath(unvisited, inner_shape)
-        maze = _carvePath(maze, path)
+    while unvisited.length() > 0:
+        path = _samplePath(unvisited, size)
+        maze = _carvePath(maze, path, size)
 
         for cell in path[:-1]:
             unvisited.remove(cell)
 
     return maze
-
 
 
 # out = neighbors(toBoundedState((4, 2), (5, 5)), (5, 5))
@@ -187,8 +166,8 @@ def sample(size: Coords, seed: int):
 # print([toCoords(s, (5,5)) for s in path])
 # print(maze)
 
-# out = sample((90, 90), 0)
+# out = sample((30, 30), 0)
 
 # import matplotlib.pyplot as plt
-# plt.imshow(out)
+# plt.imshow(out, cmap='gray_r')
 # plt.show()

@@ -39,30 +39,3 @@ def neighbors(state: int, shape: Coords):
         toBoundedState((x, y + 1), shape),
         toBoundedState((x, y - 1), shape),
     ])
-
-@njit(cache=True)
-def actions(state: int, nstate: int, shape: Coords):
-    x, y = toCoords(state, shape)
-    ret = []
-
-    # this constructivist approach to building the action list accounts
-    # for the possibility of multiple actions leading ot the same next state
-    # for example, in a corner state multiple actions bump into a wall
-    # and the state does not change
-    up = toBoundedState((x, y + 1), shape)
-    if up == nstate:
-        ret.append(0)
-
-    right = toBoundedState((x + 1, y - 1), shape)
-    if right == nstate:
-        ret.append(1)
-
-    down = toBoundedState((x, y - 1), shape)
-    if down == nstate:
-        ret.append(2)
-
-    left = toBoundedState((x - 1, y), shape)
-    if left == nstate:
-        ret.append(3)
-
-    return ret

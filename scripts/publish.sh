@@ -7,7 +7,6 @@ echo "https://${GH_TOKEN}:@github.com" > .git/credentials
 git config user.email "andnpatterson@gmail.com"
 git config user.name "github-action"
 
-git fetch --unshallow
 git fetch --all --tags
 
 git checkout -f main

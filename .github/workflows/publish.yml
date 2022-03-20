@@ -23,9 +23,8 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install pipenv
-        pipenv install --dev --ignore-pipfile
-        pipenv shell
+        pipenv install --dev --ignore-pipfile --python 3.9
     - name: Publish
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: ./scripts/publish.sh
+      run: pipenv run ./scripts/publish.sh

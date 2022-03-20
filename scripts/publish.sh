@@ -10,7 +10,7 @@ git config user.name "github-action"
 git fetch --unshallow
 git fetch --all --tags
 
-git checkout main
+git checkout -f main
 
 # sync package dependencies
 pipenv-setup sync --dev --pipfile

@@ -16,3 +16,6 @@ pipenv-setup sync --dev --pipfile
 
 # bump the version
 cz bump --no-verify --yes --check-consistency
+
+git push
+git push --tags

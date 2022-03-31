@@ -1,11 +1,11 @@
 from typing import Tuple
 from numba import njit
-from utils.SamplableSet import SamplableSet
+from TheAmazingProc.utils.SamplableSet import SamplableSet
 
 Coords = Tuple[int, int]
 
 @njit(cache=True)
-def clip(x: float, mi: float, ma: float):
+def intClip(x: int, mi: int, ma: int):
     if x >= ma:
         return ma - 1
 
@@ -15,12 +15,19 @@ def clip(x: float, mi: float, ma: float):
     return x
 
 @njit(cache=True)
+def toState(state: Coords, shape: Coords) -> int:
+    x, y = state
+    return int(y * shape[0] + x)
+
+@njit(cache=True)
 def toBoundedState(state: Coords, shape: Coords) -> int:
     x, y = state
     mx, my = shape
 
-    s = clip(y, 0, my) * shape[0] + clip(x, 0, mx)
-    return int(s)
+    return toState(
+        (intClip(x, 0, mx), intClip(y, 0, my)),
+        shape,
+    )
 
 @njit(cache=True)
 def toCoords(state: int, shape: Coords) -> Coords:

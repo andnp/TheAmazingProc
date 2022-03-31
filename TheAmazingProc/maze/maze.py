@@ -1,7 +1,7 @@
 import numpy as np
 from numba import njit
-from utils.SamplableSet import SamplableSet
-from maze.grid import Coords, neighbors, toCoords
+from TheAmazingProc.utils.SamplableSet import SamplableSet
+from TheAmazingProc.maze.grid import Coords, neighbors, toCoords
 
 @njit(cache=True)
 def _samplePath(unvisited: SamplableSet, shape: Coords):

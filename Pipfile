@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 numba = "*"
 numpy = "*"
+rlglue = {editable = true, ref = "0.4", git = "ssh://git@github.com/andnp/RlGlue"}
 
 [dev-packages]
 mypy = "*"

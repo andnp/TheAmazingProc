@@ -4,6 +4,11 @@ from TheAmazingProc.utils.SamplableSet import SamplableSet
 
 Coords = Tuple[int, int]
 
+RIGHT = 0
+DOWN = 1
+LEFT = 2
+UP = 3
+
 @njit(cache=True)
 def intClip(x: int, mi: int, ma: int):
     if x >= ma:
@@ -46,3 +51,19 @@ def neighbors(state: int, shape: Coords):
         toBoundedState((x, y + 1), shape),
         toBoundedState((x, y - 1), shape),
     ])
+
+@njit(cache=True)
+def takeAction(state: Coords, action: int):
+    x, y = state
+    if action == RIGHT:
+        x += 1
+    elif action == DOWN:
+        y -= 1
+    elif action == LEFT:
+        x -= 1
+    elif action == UP:
+        y += 1
+    else:
+        raise Exception(f'Unknown action: {action}')
+
+    return x, y

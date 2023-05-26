@@ -1,14 +1,47 @@
 import numpy as np
-from typing import Dict, Tuple
-from TheAmazingProc.maze.grid import Coords
+from typing import Dict, Tuple, TypedDict
+from TheAmazingProc.maze.grid import Coords, takeAction
 from TheAmazingProc.maze.maze import sample
 from TheAmazingProc.utils.tuples import updateElement
 from RlGlue import BaseEnvironment
 
-RIGHT = 0
-DOWN = 1
-LEFT = 2
-UP = 3
+class Element(TypedDict):
+    last_visit: int
+    type: str
+
+class Patch:
+    def __init__(self, size: Coords, seed: int):
+        self.seed = seed
+        self._rng = np.random.default_rng(seed)
+
+        self._size = size
+        self._grid = sample(size, seed)
+        self.elements: Dict[Coords, Element] = {}
+
+    def _scatterFlowers(self):
+        area = self._size[0] * self._size[1]
+        n_flowers = self._rng.integers(int(area / 5), int(area / 3))
+        xs = self._rng.integers(0, self._size[0], size=n_flowers)
+        ys = self._rng.integers(0, self._size[1], size=n_flowers)
+
+        for coord in zip(xs, ys):
+            if self.isWall(coord): continue
+
+            self.elements[coord] = {
+                'last_visit': 0,
+                'type': 'flower',
+            }
+
+    def isWall(self, coord: Coords) -> bool:
+        x, y = coord
+        return self._grid[x, y] == 1
+
+    def toDisk(self, path: str):
+        ...
+
+    @classmethod
+    def fromDisk(cls, path: str):
+        ...
 
 class EndlessMaze(BaseEnvironment):
     def __init__(self):
@@ -26,7 +59,7 @@ class EndlessMaze(BaseEnvironment):
         self._rng = np.random.default_rng()
 
         # TODO: this should be its own class with background loading/off-loading
-        self._patches: Dict[Coords, np.ndarray] = {}
+        self._patches: Dict[Coords, Patch] = {}
 
         self._patch_seed = 0
 
@@ -50,18 +83,7 @@ class EndlessMaze(BaseEnvironment):
 
         # first look a step ahead to see where we _might_ go
         # we will then check for walls and other patches
-        px = x
-        py = y
-        if action == RIGHT:
-            px += 1
-        elif action == DOWN:
-            py -= 1
-        elif action == LEFT:
-            px -= 1
-        elif action == UP:
-            py += 1
-        else:
-            raise Exception(f'Unknown action: {action}')
+        px, py = takeAction((x, y), action)
 
         # check if we landed in a new patch
         next_pid = pid
@@ -88,7 +110,7 @@ class EndlessMaze(BaseEnvironment):
         # check for walls
         next_patch = self._patches[next_pid]
 
-        if next_patch[px, py] == 1:
+        if next_patch.isWall((px, py)):
             px = x
             py = y
 
@@ -137,7 +159,7 @@ class EndlessMaze(BaseEnvironment):
             ey = sy + w
 
             print(coords, sx, ex, sy, ey)
-            grid[sx:ex, sy:ey] = self._patches[coords]
+            grid[sx:ex, sy:ey] = self._patches[coords]._grid
 
         import matplotlib.pyplot as plt
         plt.imshow(grid[::-1, :], cmap='gray_r')
@@ -175,14 +197,18 @@ class EndlessMaze(BaseEnvironment):
             return patch
 
         self._patch_seed += 1
-        patch = sample(self._patch_size, seed=self._patch_seed)
+        patch = Patch(self._patch_size, self._patch_seed)
 
+        # this needs to be handled by the patch manager
+        # because it requires coordinating between two (or more) patches)
         self._attachToSurrounding(patch, coords)
         self._patches[coords] = patch
 
         return patch
 
-    def _attachToSurrounding(self, me: np.ndarray, coords: Coords):
+    def _attachToSurrounding(self, me: Patch, coords: Coords):
+        my_grid = me._grid
+
         for axis in range(2):
             for d in range(2):
                 other_coords = updateElement(coords, axis, coords[axis] + (2 * d - 1))
@@ -191,11 +217,12 @@ class EndlessMaze(BaseEnvironment):
                 if other is None:
                     continue
 
+                other_grid = other._grid
                 i = self._rng.integers(0, self._patch_size[1 - axis], size=self._connecting_paths[1 - axis]) * 2 + 1
 
                 if axis == 0:
-                    me[-d, i] = 0
-                    other[d - 1, i] = 0
+                    my_grid[-d, i] = 0
+                    other_grid[d - 1, i] = 0
                 else:
-                    me[i, -d] = 0
-                    other[i, d - 1] = 0
+                    my_grid[i, -d] = 0
+                    other_grid[i, d - 1] = 0
